@@ -42,6 +42,11 @@ const config: any = {
 			accounts: [process.env.PRIVATE_KEY],
 		},
 	},
+
+	etherscan: {
+		apiKey: process.env.ETHERSCAN_API_KEY, //change this key according to the explorer.
+		// apiKey: process.env.BSCSCAN_API_KEY, //change this key according to the explorer.
+	},
 };
 
 export default config;
