@@ -52,6 +52,8 @@ contract AIWorkspaceGateway is Ownable {
 
     event RequestFailed(uint256 indexed requestId, string reason);
 
+    event FundsWithdrawn(address indexed treasury, uint256 amount);
+
     modifier onlyBackend() {
         require(msg.sender == backendSigner, "Not backend");
         _;
@@ -119,6 +121,8 @@ contract AIWorkspaceGateway is Ownable {
         (bool success,) = treasury.call{value: amount}("");
 
         require(success, "Transfer failed");
+
+        emit FundsWithdrawn(treasury, amount);
     }
 
     function getUserRequests(address user) external view returns (uint256[] memory) {
