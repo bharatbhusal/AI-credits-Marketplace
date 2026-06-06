@@ -274,9 +274,9 @@
 		{
 			"inputs": [
 				{
-					"internalType": "euint128",
+					"internalType": "uint128",
 					"name": "creditsRequested",
-					"type": "bytes32"
+					"type": "uint128"
 				}
 			],
 			"name": "requestAccountCreation",
@@ -293,9 +293,9 @@
 		{
 			"inputs": [
 				{
-					"internalType": "euint128",
+					"internalType": "uint128",
 					"name": "creditsRequested",
-					"type": "bytes32"
+					"type": "uint128"
 				}
 			],
 			"name": "requestRecharge",

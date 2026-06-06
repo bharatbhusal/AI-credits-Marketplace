@@ -5,7 +5,6 @@ import {
 	createWalletClient,
 	custom,
 	http,
-	PublicClient,
 	WalletClient,
 	formatEther,
 } from "viem";
@@ -16,18 +15,14 @@ import { sepolia } from "viem/chains";
    STATE (single source of truth)
 ----------------------------------- */
 
-let publicClient: PublicClient;
-
 let walletClient: WalletClient | null = null;
-
-let account: `0x${string}` | null = null;
 
 /* -----------------------------------
    INIT PUBLIC CLIENT (READ ONLY)
 ----------------------------------- */
 
 export function initChain() {
-	publicClient = createPublicClient({
+	return createPublicClient({
 		chain: sepolia,
 		transport: http(),
 	});
@@ -42,14 +37,12 @@ export async function connectWallet() {
 		throw new Error("No wallet found");
 	}
 
-	if (!publicClient) initChain();
+	initChain();
 
 	// Request accounts
 	const accounts = (await window.ethereum.request({
 		method: "eth_requestAccounts",
 	})) as `0x${string}`[];
-
-	account = accounts[0];
 
 	// Create wallet client
 	walletClient = createWalletClient({
@@ -57,7 +50,7 @@ export async function connectWallet() {
 		transport: custom(window.ethereum),
 	});
 
-	return { account, walletClient };
+	return { account: accounts[0] };
 }
 
 /* -----------------------------------
@@ -65,7 +58,6 @@ export async function connectWallet() {
 ----------------------------------- */
 
 export function disconnectWallet() {
-	account = null;
 	walletClient = null;
 }
 
@@ -73,12 +65,18 @@ export function disconnectWallet() {
    GETTERS
 ----------------------------------- */
 
-export function getAccount() {
-	return account;
-}
-
 export function getWalletClient() {
-	return walletClient;
+	if (!window.ethereum) {
+		throw new Error("No wallet found");
+	}
+
+	initChain();
+
+	// Create wallet client
+	return createWalletClient({
+		chain: sepolia,
+		transport: custom(window.ethereum),
+	});
 }
 
 /* -----------------------------------
@@ -88,9 +86,9 @@ export function getWalletClient() {
 export async function getNativeBalance(
 	address?: `0x${string}`,
 ) {
-	if (!publicClient) initChain();
+	const publicClient = initChain();
 
-	const addr = address || account;
+	const addr = walletClient?.account?.address || address;
 
 	if (!addr) throw new Error("No address provided");
 

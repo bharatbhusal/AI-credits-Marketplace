@@ -58,26 +58,28 @@ contract AIWorkspaceGateway is Ownable {
         _;
     }
 
-    function requestAccountCreation(euint128 creditsRequested) external payable returns (euint128 requestId) {
-        euint128 requiredPayment = FHE.mul(creditsRequested, pricePerCredit);
+    function requestAccountCreation(uint128 creditsRequested) external payable returns (euint128 requestId) {
+        euint128 eCreditRequested = FHE.asEuint128(creditsRequested);
+        euint128 requiredPayment = FHE.mul(eCreditRequested, pricePerCredit);
 
         ebool ok = FHE.gte(FHE.asEuint128(msg.value), requiredPayment);
         require(FHE.getDecryptResult(ok) == false, "Insufficient payment");
 
-        requestId = _createRequest(RequestType.CREATE_ACCOUNT, creditsRequested);
+        requestId = _createRequest(RequestType.CREATE_ACCOUNT, eCreditRequested);
 
-        emit AccountCreationRequested(requestId, msg.sender, creditsRequested, FHE.asEuint128(msg.value));
+        emit AccountCreationRequested(requestId, msg.sender, eCreditRequested, FHE.asEuint128(msg.value));
     }
 
-    function requestRecharge(euint128 creditsRequested) external payable returns (euint128 requestId) {
-        euint128 requiredPayment = FHE.mul(creditsRequested, pricePerCredit);
+    function requestRecharge(uint128 creditsRequested) external payable returns (euint128 requestId) {
+        euint128 eCreditRequested = FHE.asEuint128(creditsRequested);
+        euint128 requiredPayment = FHE.mul(eCreditRequested, pricePerCredit);
 
         ebool ok = FHE.gte(FHE.asEuint128(msg.value), requiredPayment);
         require(FHE.getDecryptResult(ok) == false, "Insufficient payment");
 
-        requestId = _createRequest(RequestType.RECHARGE, creditsRequested);
+        requestId = _createRequest(RequestType.RECHARGE, eCreditRequested);
 
-        emit RechargeRequested(requestId, msg.sender, creditsRequested, FHE.asEuint128(msg.value));
+        emit RechargeRequested(requestId, msg.sender, eCreditRequested, FHE.asEuint128(msg.value));
     }
 
     function _createRequest(RequestType requestType, euint128 creditsRequested) internal returns (euint128 requestId) {

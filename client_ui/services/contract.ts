@@ -5,18 +5,13 @@ import {
 	createCofheClient,
 } from "@cofhe/sdk/web";
 
-import { Encryptable, FheTypes } from "@cofhe/sdk";
+import {
+	CofheClient,
+	Encryptable,
+	FheTypes,
+} from "@cofhe/sdk";
 
 import { chains } from "@cofhe/sdk/chains";
-
-import {
-	createPublicClient,
-	createWalletClient,
-	http,
-	custom,
-	PublicClient,
-	WalletClient,
-} from "viem";
 
 import { sepolia } from "viem/chains";
 
@@ -24,15 +19,17 @@ import {
 	CONTRACT_ABI,
 	CONTRACT_ADDRESS,
 } from "@/config/contract";
+import {
+	connectWallet,
+	getWalletClient,
+	initChain,
+} from "./chain";
 
 /* -----------------------------------
    GLOBAL STATE (AS SDK EXPECTS)
 ----------------------------------- */
 
-let client: any;
-let publicClient: PublicClient;
-let walletClient: WalletClient;
-let account: `0x${string}`;
+let client: CofheClient;
 
 /* -----------------------------------
    INIT (MUST CALL FIRST)
@@ -52,32 +49,8 @@ export async function init() {
 
 	client = createCofheClient(config);
 
-	// viem clients
-	publicClient = createPublicClient({
-		chain: sepolia,
-		transport: http(),
-	});
-
-	walletClient = createWalletClient({
-		chain: sepolia,
-		transport: custom(window.ethereum),
-	});
-
-	// wallet connect
-	const accounts = await window.ethereum.request({
-		method: "eth_requestAccounts",
-	});
-
-	account = accounts[0];
-
-	// attach wallet account
-	// walletClient.account = account;
-
 	// connect cofhe
-	await client.connect(publicClient, walletClient);
-
-	// permit
-	await client.permits.getOrCreateSelfPermit();
+	await client.connect(initChain(), getWalletClient());
 }
 
 /* -----------------------------------
@@ -88,7 +61,7 @@ export async function getPricePerCredit() {
 	const permit =
 		await client.permits.getOrCreateSelfPermit();
 
-	const ctHash = await publicClient.readContract({
+	const ctHash = await initChain().readContract({
 		address: CONTRACT_ADDRESS,
 		abi: CONTRACT_ABI,
 		functionName: "pricePerCredit",
@@ -108,7 +81,7 @@ export async function getNextRequestId() {
 	const permit =
 		await client.permits.getOrCreateSelfPermit();
 
-	const ctHash = await publicClient.readContract({
+	const ctHash = await initChain().readContract({
 		address: CONTRACT_ADDRESS,
 		abi: CONTRACT_ABI,
 		functionName: "nextRequestId",
@@ -125,7 +98,7 @@ export async function getNextRequestId() {
 ----------------------------------- */
 
 export async function getRequest(requestId: bigint) {
-	return await publicClient.readContract({
+	return await initChain().readContract({
 		address: CONTRACT_ADDRESS,
 		abi: CONTRACT_ABI,
 		functionName: "requests",
@@ -134,7 +107,7 @@ export async function getRequest(requestId: bigint) {
 }
 
 export async function getUserRequests(user: `0x${string}`) {
-	return await publicClient.readContract({
+	return await initChain().readContract({
 		address: CONTRACT_ADDRESS,
 		abi: CONTRACT_ABI,
 		functionName: "getUserRequests",
@@ -149,19 +122,15 @@ export async function getUserRequests(user: `0x${string}`) {
 export async function requestAccountCreation(
 	creditsRequested: number,
 ) {
-	const [encryptedAmount] = await client
-		.encryptInputs([
-			Encryptable.uint128(BigInt(creditsRequested)),
-		])
-		.execute();
-
-	return await walletClient.writeContract({
+	return await getWalletClient().writeContract({
 		address: CONTRACT_ADDRESS,
 		abi: CONTRACT_ABI,
 		functionName: "requestAccountCreation",
-		args: [encryptedAmount],
-		account,
+		args: [creditsRequested],
+		account: "0xDad91936Dcc02b4042fF2b2bcea054A1Ba7d720c",
 		chain: sepolia,
+		gas: BigInt("200000"),
+		value: BigInt(creditsRequested),
 	});
 }
 
@@ -178,42 +147,12 @@ export async function requestRecharge(
 		])
 		.execute();
 
-	return await walletClient.writeContract({
+	return await getWalletClient().writeContract({
 		address: CONTRACT_ADDRESS,
 		abi: CONTRACT_ABI,
 		functionName: "requestRecharge",
 		args: [encryptedAmount],
-		account,
-		chain: sepolia,
-	});
-}
-
-/* -----------------------------------
-   OPTIONAL: PUBLISH FLOW EXAMPLE
------------------------------------ */
-
-export async function publishRequest(requestId: bigint) {
-	const permit =
-		await client.permits.getOrCreateSelfPermit();
-
-	const ctHash = await publicClient.readContract({
-		address: CONTRACT_ADDRESS,
-		abi: CONTRACT_ABI,
-		functionName: "requests",
-		args: [requestId],
-	});
-
-	const { decryptedValue, signature } = await client
-		.decryptForTx(ctHash)
-		.withPermit(permit)
-		.execute();
-
-	return await walletClient.writeContract({
-		address: CONTRACT_ADDRESS,
-		abi: CONTRACT_ABI,
-		functionName: "markCompleted",
-		args: [requestId, decryptedValue, signature],
-		account,
+		account: (await connectWallet()).account,
 		chain: sepolia,
 	});
 }
