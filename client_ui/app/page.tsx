@@ -146,14 +146,14 @@ export default function HomePage() {
 					onRecharge={handleRecharge}
 				/>
 
-				<RequestsCard
+				{/* <RequestsCard
 					account={account}
 					requests={requests}
 					loading={loadingRequests}
 					onLoad={loadRequests}
-				/>
+				/> */}
 
-				<ActivityFeedCard activities={activities} />
+				{/* <ActivityFeedCard activities={activities} /> */}
 			</div>
 		</div>
 	);

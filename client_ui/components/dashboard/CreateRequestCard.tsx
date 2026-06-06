@@ -8,6 +8,7 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "../ui/label";
 
 type Props = {
 	credits: string;
@@ -33,6 +34,7 @@ export function CreateRequestCard({
 			</CardHeader>
 
 			<CardContent className="space-y-4">
+				<Label>Credit Count: </Label>
 				<Input
 					type="number"
 					placeholder="Enter credits"

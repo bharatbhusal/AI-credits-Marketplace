@@ -21,6 +21,7 @@ export function RequestsCard({
 	loading,
 	onLoad,
 }: Props) {
+	console.log(requests);
 	return (
 		<Card>
 			<CardHeader className="flex flex-row items-center justify-between">
@@ -54,10 +55,6 @@ export function RequestsCard({
 								<span className="text-sm font-mono">
 									Request #{id.toString()}
 								</span>
-
-								<Button size="sm" variant="ghost">
-									View
-								</Button>
 							</div>
 						))}
 					</div>
