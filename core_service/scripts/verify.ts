@@ -1,7 +1,7 @@
 import { run } from "hardhat";
 
 const CONTRACT_ADDRESS =
-	"0x7b8Dfa1B1b3f1cea137a40b4ec87198a72157ffE";
+	"0xe77867b160ff0d9837f39Beb0293E7E71Bb37805";
 
 async function main() {
 	console.log(
@@ -11,7 +11,10 @@ async function main() {
 	try {
 		await run("verify:verify", {
 			address: CONTRACT_ADDRESS,
-			constructorArguments: [1780935713],
+			constructorArguments: [
+				"1",
+				"0xDad91936Dcc02b4042fF2b2bcea054A1Ba7d720c",
+			],
 		});
 
 		console.log("✅ Contract verified successfully!");
