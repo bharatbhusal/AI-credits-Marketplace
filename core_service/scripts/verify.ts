@@ -1,7 +1,7 @@
 import { run } from "hardhat";
 
 const CONTRACT_ADDRESS =
-	"0xe77867b160ff0d9837f39Beb0293E7E71Bb37805";
+	"0x0150Ab86a8BAa4dCC4Cb0Be736617460fd4eF27B";
 
 async function main() {
 	console.log(
@@ -12,7 +12,7 @@ async function main() {
 		await run("verify:verify", {
 			address: CONTRACT_ADDRESS,
 			constructorArguments: [
-				"1",
+				"2",
 				"0xDad91936Dcc02b4042fF2b2bcea054A1Ba7d720c",
 			],
 		});

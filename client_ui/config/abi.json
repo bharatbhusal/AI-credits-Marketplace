@@ -3,9 +3,9 @@
 		{
 			"inputs": [
 				{
-					"internalType": "uint256",
+					"internalType": "uint128",
 					"name": "_pricePerCredit",
-					"type": "uint256"
+					"type": "uint128"
 				},
 				{
 					"internalType": "address",
@@ -39,13 +39,24 @@
 			"type": "error"
 		},
 		{
+			"inputs": [
+				{
+					"internalType": "int32",
+					"name": "value",
+					"type": "int32"
+				}
+			],
+			"name": "SecurityZoneOutOfBounds",
+			"type": "error"
+		},
+		{
 			"anonymous": false,
 			"inputs": [
 				{
 					"indexed": true,
-					"internalType": "uint256",
+					"internalType": "euint128",
 					"name": "requestId",
-					"type": "uint256"
+					"type": "bytes32"
 				},
 				{
 					"indexed": true,
@@ -55,15 +66,15 @@
 				},
 				{
 					"indexed": false,
-					"internalType": "uint256",
+					"internalType": "euint128",
 					"name": "creditsRequested",
-					"type": "uint256"
+					"type": "bytes32"
 				},
 				{
 					"indexed": false,
-					"internalType": "uint256",
+					"internalType": "euint128",
 					"name": "amountPaid",
-					"type": "uint256"
+					"type": "bytes32"
 				}
 			],
 			"name": "AccountCreationRequested",
@@ -93,9 +104,9 @@
 			"inputs": [
 				{
 					"indexed": true,
-					"internalType": "uint256",
+					"internalType": "euint128",
 					"name": "requestId",
-					"type": "uint256"
+					"type": "bytes32"
 				},
 				{
 					"indexed": true,
@@ -105,15 +116,15 @@
 				},
 				{
 					"indexed": false,
-					"internalType": "uint256",
+					"internalType": "euint128",
 					"name": "creditsRequested",
-					"type": "uint256"
+					"type": "bytes32"
 				},
 				{
 					"indexed": false,
-					"internalType": "uint256",
+					"internalType": "euint128",
 					"name": "amountPaid",
-					"type": "uint256"
+					"type": "bytes32"
 				}
 			],
 			"name": "RechargeRequested",
@@ -124,9 +135,9 @@
 			"inputs": [
 				{
 					"indexed": true,
-					"internalType": "uint256",
+					"internalType": "euint128",
 					"name": "requestId",
-					"type": "uint256"
+					"type": "bytes32"
 				}
 			],
 			"name": "RequestCompleted",
@@ -137,9 +148,9 @@
 			"inputs": [
 				{
 					"indexed": true,
-					"internalType": "uint256",
+					"internalType": "euint128",
 					"name": "requestId",
-					"type": "uint256"
+					"type": "bytes32"
 				},
 				{
 					"indexed": false,
@@ -175,9 +186,9 @@
 			"name": "getUserRequests",
 			"outputs": [
 				{
-					"internalType": "uint256[]",
+					"internalType": "euint128[]",
 					"name": "",
-					"type": "uint256[]"
+					"type": "bytes32[]"
 				}
 			],
 			"stateMutability": "view",
@@ -186,9 +197,9 @@
 		{
 			"inputs": [
 				{
-					"internalType": "uint256",
+					"internalType": "euint128",
 					"name": "requestId",
-					"type": "uint256"
+					"type": "bytes32"
 				}
 			],
 			"name": "markCompleted",
@@ -199,9 +210,9 @@
 		{
 			"inputs": [
 				{
-					"internalType": "uint256",
+					"internalType": "euint128",
 					"name": "requestId",
-					"type": "uint256"
+					"type": "bytes32"
 				},
 				{
 					"internalType": "string",
@@ -219,9 +230,9 @@
 			"name": "nextRequestId",
 			"outputs": [
 				{
-					"internalType": "uint256",
+					"internalType": "euint128",
 					"name": "",
-					"type": "uint256"
+					"type": "bytes32"
 				}
 			],
 			"stateMutability": "view",
@@ -245,9 +256,9 @@
 			"name": "pricePerCredit",
 			"outputs": [
 				{
-					"internalType": "uint256",
+					"internalType": "euint128",
 					"name": "",
-					"type": "uint256"
+					"type": "bytes32"
 				}
 			],
 			"stateMutability": "view",
@@ -263,17 +274,17 @@
 		{
 			"inputs": [
 				{
-					"internalType": "uint256",
+					"internalType": "euint128",
 					"name": "creditsRequested",
-					"type": "uint256"
+					"type": "bytes32"
 				}
 			],
 			"name": "requestAccountCreation",
 			"outputs": [
 				{
-					"internalType": "uint256",
+					"internalType": "euint128",
 					"name": "requestId",
-					"type": "uint256"
+					"type": "bytes32"
 				}
 			],
 			"stateMutability": "payable",
@@ -282,17 +293,17 @@
 		{
 			"inputs": [
 				{
-					"internalType": "uint256",
+					"internalType": "euint128",
 					"name": "creditsRequested",
-					"type": "uint256"
+					"type": "bytes32"
 				}
 			],
 			"name": "requestRecharge",
 			"outputs": [
 				{
-					"internalType": "uint256",
+					"internalType": "euint128",
 					"name": "requestId",
-					"type": "uint256"
+					"type": "bytes32"
 				}
 			],
 			"stateMutability": "payable",
@@ -301,17 +312,17 @@
 		{
 			"inputs": [
 				{
-					"internalType": "uint256",
+					"internalType": "euint128",
 					"name": "",
-					"type": "uint256"
+					"type": "bytes32"
 				}
 			],
 			"name": "requests",
 			"outputs": [
 				{
-					"internalType": "uint256",
+					"internalType": "euint128",
 					"name": "id",
-					"type": "uint256"
+					"type": "bytes32"
 				},
 				{
 					"internalType": "address",
@@ -324,14 +335,14 @@
 					"type": "uint8"
 				},
 				{
-					"internalType": "uint256",
+					"internalType": "euint128",
 					"name": "creditsRequested",
-					"type": "uint256"
+					"type": "bytes32"
 				},
 				{
-					"internalType": "uint256",
+					"internalType": "euint128",
 					"name": "amountPaid",
-					"type": "uint256"
+					"type": "bytes32"
 				},
 				{
 					"internalType": "enum AIWorkspaceGateway.RequestStatus",
@@ -339,9 +350,9 @@
 					"type": "uint8"
 				},
 				{
-					"internalType": "uint256",
+					"internalType": "euint128",
 					"name": "createdAt",
-					"type": "uint256"
+					"type": "bytes32"
 				}
 			],
 			"stateMutability": "view",
@@ -363,9 +374,9 @@
 		{
 			"inputs": [
 				{
-					"internalType": "uint256",
+					"internalType": "euint128",
 					"name": "newPrice",
-					"type": "uint256"
+					"type": "bytes32"
 				}
 			],
 			"name": "setPricePerCredit",
@@ -402,25 +413,12 @@
 			"name": "userRequests",
 			"outputs": [
 				{
-					"internalType": "uint256",
+					"internalType": "euint128",
 					"name": "",
-					"type": "uint256"
+					"type": "bytes32"
 				}
 			],
 			"stateMutability": "view",
-			"type": "function"
-		},
-		{
-			"inputs": [
-				{
-					"internalType": "address payable",
-					"name": "treasury",
-					"type": "address"
-				}
-			],
-			"name": "withdraw",
-			"outputs": [],
-			"stateMutability": "nonpayable",
 			"type": "function"
 		}
 	]

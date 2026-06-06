@@ -57,7 +57,7 @@ export async function connectWallet() {
 		transport: custom(window.ethereum),
 	});
 
-	return account;
+	return { account, walletClient };
 }
 
 /* -----------------------------------

@@ -1,10 +1,21 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import {
+	createCofheConfig,
+	createCofheClient,
+} from "@cofhe/sdk/web";
+
+import { Encryptable, FheTypes } from "@cofhe/sdk";
+
+import { chains } from "@cofhe/sdk/chains";
+
+import {
 	createPublicClient,
+	createWalletClient,
 	http,
+	custom,
 	PublicClient,
-	parseAbiItem,
+	WalletClient,
 } from "viem";
 
 import { sepolia } from "viem/chains";
@@ -13,54 +24,107 @@ import {
 	CONTRACT_ABI,
 	CONTRACT_ADDRESS,
 } from "@/config/contract";
-import { getWalletClient, getAccount } from "./chain";
 
 /* -----------------------------------
-   CLIENTS
+   GLOBAL STATE (AS SDK EXPECTS)
 ----------------------------------- */
 
+let client: any;
 let publicClient: PublicClient;
+let walletClient: WalletClient;
+let account: `0x${string}`;
 
-function ensureClient() {
-	if (!publicClient) {
-		publicClient = createPublicClient({
-			chain: sepolia,
-			transport: http(),
-		});
-	}
+/* -----------------------------------
+   INIT (MUST CALL FIRST)
+----------------------------------- */
 
-	if (!getWalletClient()) {
-		throw new Error("Wallet not connected");
-	}
+export async function init() {
+	// switch chain
+	await window.ethereum.request({
+		method: "wallet_switchEthereumChain",
+		params: [{ chainId: "0xaa36a7" }],
+	});
+
+	// COFHE config
+	const config = createCofheConfig({
+		supportedChains: [chains.sepolia],
+	});
+
+	client = createCofheClient(config);
+
+	// viem clients
+	publicClient = createPublicClient({
+		chain: sepolia,
+		transport: http(),
+	});
+
+	walletClient = createWalletClient({
+		chain: sepolia,
+		transport: custom(window.ethereum),
+	});
+
+	// wallet connect
+	const accounts = await window.ethereum.request({
+		method: "eth_requestAccounts",
+	});
+
+	account = accounts[0];
+
+	// attach wallet account
+	// walletClient.account = account;
+
+	// connect cofhe
+	await client.connect(publicClient, walletClient);
+
+	// permit
+	await client.permits.getOrCreateSelfPermit();
 }
 
 /* -----------------------------------
-   READ: CONTRACT VALUES
+   READ: PRICE PER CREDIT (FHE)
 ----------------------------------- */
 
 export async function getPricePerCredit() {
-	ensureClient();
+	const permit =
+		await client.permits.getOrCreateSelfPermit();
 
-	return (await publicClient.readContract({
+	const ctHash = await publicClient.readContract({
 		address: CONTRACT_ADDRESS,
 		abi: CONTRACT_ABI,
 		functionName: "pricePerCredit",
-	})) as bigint;
+	});
+
+	return await client
+		.decryptForView(ctHash, FheTypes.Uint128)
+		.withPermit(permit)
+		.execute();
 }
 
-export async function getNextRequestId() {
-	ensureClient();
+/* -----------------------------------
+   READ: NEXT REQUEST ID
+----------------------------------- */
 
-	return await publicClient.readContract({
+export async function getNextRequestId() {
+	const permit =
+		await client.permits.getOrCreateSelfPermit();
+
+	const ctHash = await publicClient.readContract({
 		address: CONTRACT_ADDRESS,
 		abi: CONTRACT_ABI,
 		functionName: "nextRequestId",
 	});
+
+	return await client
+		.decryptForView(ctHash, FheTypes.Uint128)
+		.withPermit(permit)
+		.execute();
 }
 
-export async function getRequest(requestId: bigint) {
-	ensureClient();
+/* -----------------------------------
+   READ: REQUESTS
+----------------------------------- */
 
+export async function getRequest(requestId: bigint) {
 	return await publicClient.readContract({
 		address: CONTRACT_ADDRESS,
 		abi: CONTRACT_ABI,
@@ -69,140 +133,87 @@ export async function getRequest(requestId: bigint) {
 	});
 }
 
-export async function getUserRequests(
-	userAddress: `0x${string}`,
-) {
-	ensureClient();
-
+export async function getUserRequests(user: `0x${string}`) {
 	return await publicClient.readContract({
 		address: CONTRACT_ADDRESS,
 		abi: CONTRACT_ABI,
 		functionName: "getUserRequests",
-		args: [userAddress],
+		args: [user],
 	});
 }
 
 /* -----------------------------------
-   WRITE: CONTRACT ACTIONS
+   WRITE: ACCOUNT CREATION
 ----------------------------------- */
 
 export async function requestAccountCreation(
 	creditsRequested: number,
 ) {
-	ensureClient();
-
-	const walletClient = getWalletClient();
-	const account = getAccount();
-
-	if (!walletClient || !account) {
-		throw new Error("Wallet not connected");
-	}
-
-	const pricePerCredit = await getPricePerCredit();
-
-	const value = BigInt(creditsRequested) * pricePerCredit;
+	const [encryptedAmount] = await client
+		.encryptInputs([
+			Encryptable.uint128(BigInt(creditsRequested)),
+		])
+		.execute();
 
 	return await walletClient.writeContract({
 		address: CONTRACT_ADDRESS,
 		abi: CONTRACT_ABI,
 		functionName: "requestAccountCreation",
-		args: [BigInt(creditsRequested)],
+		args: [encryptedAmount],
 		account,
 		chain: sepolia,
-		gas: BigInt("200000"),
-		value,
 	});
 }
+
+/* -----------------------------------
+   WRITE: RECHARGE
+----------------------------------- */
 
 export async function requestRecharge(
 	creditsRequested: number,
 ) {
-	ensureClient();
-
-	const walletClient = getWalletClient();
-	const account = getAccount();
-
-	if (!walletClient || !account) {
-		throw new Error("Wallet not connected");
-	}
-
-	const pricePerCredit = await getPricePerCredit();
-
-	const value = BigInt(creditsRequested) * pricePerCredit;
+	const [encryptedAmount] = await client
+		.encryptInputs([
+			Encryptable.uint128(BigInt(creditsRequested)),
+		])
+		.execute();
 
 	return await walletClient.writeContract({
 		address: CONTRACT_ADDRESS,
 		abi: CONTRACT_ABI,
 		functionName: "requestRecharge",
-		args: [BigInt(creditsRequested)],
+		args: [encryptedAmount],
 		account,
 		chain: sepolia,
-		value,
 	});
 }
 
 /* -----------------------------------
-   CONTRACT ACTIVITY (RAW)
+   OPTIONAL: PUBLISH FLOW EXAMPLE
 ----------------------------------- */
 
-export async function getRecentActivities(
-	fromBlock = BigInt("0"),
-) {
-	ensureClient();
+export async function publishRequest(requestId: bigint) {
+	const permit =
+		await client.permits.getOrCreateSelfPermit();
 
-	return await publicClient.getLogs({
+	const ctHash = await publicClient.readContract({
 		address: CONTRACT_ADDRESS,
-		fromBlock,
-		toBlock: "latest",
-	});
-}
-
-/* -----------------------------------
-   DECODED ACTIVITY (BUSINESS LAYER)
------------------------------------ */
-
-const accountCreatedEvent = parseAbiItem(
-	"event AccountCreationRequested(uint256 indexed requestId, address indexed user, uint256 creditsRequested, uint256 amountPaid)",
-);
-
-const rechargeEvent = parseAbiItem(
-	"event RechargeRequested(uint256 indexed requestId, address indexed user, uint256 creditsRequested, uint256 amountPaid)",
-);
-
-export async function getDecodedActivities() {
-	ensureClient();
-
-	const logs = await publicClient.getLogs({
-		address: CONTRACT_ADDRESS,
-		events: [accountCreatedEvent, rechargeEvent],
-		fromBlock: "earliest",
+		abi: CONTRACT_ABI,
+		functionName: "requests",
+		args: [requestId],
 	});
 
-	return logs
-		.map((log: any) => {
-			if (log.eventName === "AccountCreationRequested") {
-				return {
-					type: "CREATE_ACCOUNT",
-					requestId: log.args.requestId,
-					user: log.args.user,
-					creditsRequested: log.args.creditsRequested,
-					amountPaid: log.args.amountPaid,
-					tx: log.transactionHash,
-				};
-			}
+	const { decryptedValue, signature } = await client
+		.decryptForTx(ctHash)
+		.withPermit(permit)
+		.execute();
 
-			if (log.eventName === "RechargeRequested") {
-				return {
-					type: "RECHARGE",
-					requestId: log.args.requestId,
-					user: log.args.user,
-					creditsRequested: log.args.creditsRequested,
-					amountPaid: log.args.amountPaid,
-					tx: log.transactionHash,
-				};
-			}
-
-			return null;
-		})
-		.filter(Boolean);
+	return await walletClient.writeContract({
+		address: CONTRACT_ADDRESS,
+		abi: CONTRACT_ABI,
+		functionName: "markCompleted",
+		args: [requestId, decryptedValue, signature],
+		account,
+		chain: sepolia,
+	});
 }

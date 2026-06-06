@@ -6,7 +6,7 @@ import {
 	requestAccountCreation,
 	requestRecharge,
 	getUserRequests,
-	getDecodedActivities,
+	init,
 } from "@/services/contract";
 
 import {
@@ -27,7 +27,7 @@ type Activity = {
 };
 
 export default function HomePage() {
-	const [credits, setCredits] = useState("");
+	const [credits, setCredits] = useState("1");
 	const [requests, setRequests] = useState<bigint[]>([]);
 	const [activities, setActivities] = useState<Activity[]>(
 		[],
@@ -41,13 +41,19 @@ export default function HomePage() {
 		useState(false);
 	const [loadingChain, setLoadingChain] = useState(false);
 
-	// wallet
+	// wallet + cofhe init
 	const connectWallet = async () => {
 		setLoadingWallet(true);
+
 		try {
-			const acc = await ConnectWalletService();
+			// 1. connect wallet
+			const { account: acc } = await ConnectWalletService();
 			setAccount(acc);
 
+			// 2. IMPORTANT: init COFHE AFTER wallet is available
+			await init();
+
+			// 3. load balance
 			const bal = await getNativeBalance(acc);
 			setBalance(bal.eth);
 		} finally {
@@ -68,6 +74,7 @@ export default function HomePage() {
 		if (!account) return;
 
 		setLoadingRequests(true);
+
 		try {
 			const data = await getUserRequests(
 				account as `0x${string}`,
@@ -83,6 +90,7 @@ export default function HomePage() {
 		if (!account) return;
 
 		setLoadingChain(true);
+
 		try {
 			const bal = await getNativeBalance(
 				account as `0x${string}`,
@@ -91,21 +99,12 @@ export default function HomePage() {
 		} finally {
 			setLoadingChain(false);
 		}
-		// try {
-		// 	const [bal, act] = await Promise.all([
-		// 		getNativeBalance(account as `0x${string}`),
-		// 		getDecodedActivities(),
-		// 	]);
-		// 	setBalance(bal.eth);
-		// 	setActivities(act as Activity[]);
-		// } finally {
-		// 	setLoadingChain(false);
-		// }
 	};
 
-	// tx
+	// tx: create account
 	const handleCreateAccount = async () => {
 		setLoadingTx(true);
+
 		try {
 			await requestAccountCreation(Number(credits));
 			console.log("Account request sent");
@@ -114,8 +113,10 @@ export default function HomePage() {
 		}
 	};
 
+	// tx: recharge
 	const handleRecharge = async () => {
 		setLoadingTx(true);
+
 		try {
 			await requestRecharge(Number(credits));
 			console.log("Recharge request sent");
@@ -146,6 +147,7 @@ export default function HomePage() {
 					onRecharge={handleRecharge}
 				/>
 
+				{/* Optional */}
 				{/* <RequestsCard
 					account={account}
 					requests={requests}

@@ -5,7 +5,7 @@ async function main() {
 		"AIWorkspaceGateway",
 	);
 	const contract = await Factory.deploy(
-		"1",
+		"2",
 		"0xDad91936Dcc02b4042fF2b2bcea054A1Ba7d720c",
 	);
 	await contract.waitForDeployment();

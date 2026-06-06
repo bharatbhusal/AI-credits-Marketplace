@@ -2,10 +2,11 @@
 pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@fhenixprotocol/cofhe-contracts/FHE.sol";
 
 contract AIWorkspaceGateway is Ownable {
-    constructor(uint256 _pricePerCredit, address _backendSigner) Ownable(msg.sender) {
-        pricePerCredit = _pricePerCredit;
+    constructor(uint128 _pricePerCredit, address _backendSigner) Ownable(msg.sender) {
+        pricePerCredit = FHE.asEuint128(_pricePerCredit);
         backendSigner = _backendSigner;
     }
 
@@ -21,87 +22,88 @@ contract AIWorkspaceGateway is Ownable {
     }
 
     struct Request {
-        uint256 id;
+        euint128 id;
         address user;
         RequestType requestType;
-        uint256 creditsRequested;
-        uint256 amountPaid;
+        euint128 creditsRequested;
+        euint128 amountPaid;
         RequestStatus status;
-        uint256 createdAt;
+        euint128 createdAt;
     }
 
-    uint256 public nextRequestId;
+    euint128 public nextRequestId;
 
-    uint256 public pricePerCredit;
+    euint128 public pricePerCredit;
 
     address public backendSigner;
 
-    mapping(uint256 => Request) public requests;
+    mapping(euint128 => Request) public requests;
 
-    mapping(address => uint256[]) public userRequests;
+    mapping(address => euint128[]) public userRequests;
 
     event AccountCreationRequested(
-        uint256 indexed requestId, address indexed user, uint256 creditsRequested, uint256 amountPaid
+        euint128 indexed requestId, address indexed user, euint128 creditsRequested, euint128 amountPaid
     );
 
     event RechargeRequested(
-        uint256 indexed requestId, address indexed user, uint256 creditsRequested, uint256 amountPaid
+        euint128 indexed requestId, address indexed user, euint128 creditsRequested, euint128 amountPaid
     );
 
-    event RequestCompleted(uint256 indexed requestId);
+    event RequestCompleted(euint128 indexed requestId);
 
-    event RequestFailed(uint256 indexed requestId, string reason);
-
-    event FundsWithdrawn(address indexed treasury, uint256 amount);
+    event RequestFailed(euint128 indexed requestId, string reason);
 
     modifier onlyBackend() {
         require(msg.sender == backendSigner, "Not backend");
         _;
     }
 
-    function requestAccountCreation(uint256 creditsRequested) external payable returns (uint256 requestId) {
-        uint256 requiredPayment = creditsRequested * pricePerCredit;
+    function requestAccountCreation(euint128 creditsRequested) external payable returns (euint128 requestId) {
+        euint128 requiredPayment = FHE.mul(creditsRequested, pricePerCredit);
 
-        require(msg.value >= requiredPayment, "Insufficient payment");
+        ebool ok = FHE.gte(FHE.asEuint128(msg.value), requiredPayment);
+        require(FHE.getDecryptResult(ok) == false, "Insufficient payment");
 
         requestId = _createRequest(RequestType.CREATE_ACCOUNT, creditsRequested);
 
-        emit AccountCreationRequested(requestId, msg.sender, creditsRequested, msg.value);
+        emit AccountCreationRequested(requestId, msg.sender, creditsRequested, FHE.asEuint128(msg.value));
     }
 
-    function requestRecharge(uint256 creditsRequested) external payable returns (uint256 requestId) {
-        uint256 requiredPayment = creditsRequested * pricePerCredit;
+    function requestRecharge(euint128 creditsRequested) external payable returns (euint128 requestId) {
+        euint128 requiredPayment = FHE.mul(creditsRequested, pricePerCredit);
 
-        require(msg.value >= requiredPayment, "Insufficient payment");
+        ebool ok = FHE.gte(FHE.asEuint128(msg.value), requiredPayment);
+        require(FHE.getDecryptResult(ok) == false, "Insufficient payment");
 
         requestId = _createRequest(RequestType.RECHARGE, creditsRequested);
 
-        emit RechargeRequested(requestId, msg.sender, creditsRequested, msg.value);
+        emit RechargeRequested(requestId, msg.sender, creditsRequested, FHE.asEuint128(msg.value));
     }
 
-    function _createRequest(RequestType requestType, uint256 creditsRequested) internal returns (uint256 requestId) {
-        requestId = nextRequestId++;
+    function _createRequest(RequestType requestType, euint128 creditsRequested) internal returns (euint128 requestId) {
+        nextRequestId = FHE.add(nextRequestId, FHE.asEuint128(1));
+        requestId = nextRequestId;
 
         requests[requestId] = Request({
             id: requestId,
             user: msg.sender,
             requestType: requestType,
             creditsRequested: creditsRequested,
-            amountPaid: msg.value,
+            amountPaid: FHE.asEuint128(msg.value),
             status: RequestStatus.PENDING,
-            createdAt: block.timestamp
+            createdAt: FHE.asEuint128(block.timestamp)
         });
 
         userRequests[msg.sender].push(requestId);
     }
 
-    function markCompleted(uint256 requestId) external onlyBackend {
+    function markCompleted(euint128 requestId) external onlyBackend {
         requests[requestId].status = RequestStatus.COMPLETED;
 
         emit RequestCompleted(requestId);
     }
 
-    function markFailed(uint256 requestId, string calldata reason) external onlyBackend {
+    function markFailed(euint128 requestId, string calldata reason) external onlyBackend {
         requests[requestId].status = RequestStatus.FAILED;
 
         emit RequestFailed(requestId, reason);
@@ -111,21 +113,11 @@ contract AIWorkspaceGateway is Ownable {
         backendSigner = newBackend;
     }
 
-    function setPricePerCredit(uint256 newPrice) external onlyOwner {
+    function setPricePerCredit(euint128 newPrice) external onlyOwner {
         pricePerCredit = newPrice;
     }
 
-    function withdraw(address payable treasury) external onlyOwner {
-        uint256 amount = address(this).balance;
-
-        (bool success,) = treasury.call{value: amount}("");
-
-        require(success, "Transfer failed");
-
-        emit FundsWithdrawn(treasury, amount);
-    }
-
-    function getUserRequests(address user) external view returns (uint256[] memory) {
+    function getUserRequests(address user) external view returns (euint128[] memory) {
         return userRequests[user];
     }
 }
